@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body { @apply bg-slate-50 text-slate-900; font-family: 'Inter', system-ui, sans-serif; }
+}
+@layer components {
+  .card { @apply bg-white rounded-xl shadow-sm border border-slate-200 p-5; }
+  .kpi-value { @apply text-3xl font-bold text-slate-800; }
+  .kpi-label { @apply text-sm text-slate-500 font-medium; }
+}

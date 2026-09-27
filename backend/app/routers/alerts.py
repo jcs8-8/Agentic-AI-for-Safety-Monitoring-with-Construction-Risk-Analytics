@@ -20,7 +20,7 @@ async def list_alerts(project_id: UUID, db: AsyncSession = Depends(get_db)):
 
 @router.post("/projects/{project_id}/alerts", response_model=APIResponse)
 async def create_alert(project_id: UUID, alert: AlertCreate, db: AsyncSession = Depends(get_db)):
-    db_alert = Alert(**alert.model_dump(), project_id=project_id)
+    db_alert = Alert(**alert.model_dump(exclude={"project_id"}), project_id=project_id)
     db.add(db_alert)
     await db.flush()
     payload = AlertResponse.model_validate(db_alert)
@@ -32,9 +32,10 @@ async def create_alert(project_id: UUID, alert: AlertCreate, db: AsyncSession = 
 async def acknowledge_alert(alert_id: UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Alert).where(Alert.alert_id == alert_id))
     alert = result.scalar_one_or_none()
-    if alert:
-        alert.acknowledged = True
-        await db.commit()
+    if not alert:
+        return APIResponse(success=False, message="Alert not found")
+    alert.acknowledged = True
+    await db.commit()
     return APIResponse(message="Alert acknowledged")
 
 @router.get("/alerts/unread-count", response_model=APIResponse)
@@ -48,4 +49,5 @@ async def bulk_acknowledge(alert_ids: list[UUID], db: AsyncSession = Depends(get
     alerts = result.scalars().all()
     for alert in alerts:
         alert.acknowledged = True
+    await db.commit()
     return APIResponse(data={"acknowledged": len(alerts)}, message="Alerts acknowledged")

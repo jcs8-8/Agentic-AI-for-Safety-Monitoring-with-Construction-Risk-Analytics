@@ -11,6 +11,8 @@ import Reports from './pages/Reports'
 import Alerts from './pages/Alerts'
 import Login from './pages/Login'
 import Architecture from './pages/Architecture'
+import Incidents from './pages/Incidents'
+import Settings from './pages/Settings'
 
 function App() {
   return (
@@ -27,6 +29,8 @@ function App() {
         <Route path="/reports" element={<Reports />} />
         <Route path="/alerts" element={<Alerts />} />
         <Route path="/architecture" element={<Architecture />} />
+        <Route path="/incidents" element={<Incidents />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
     </Routes>
   )

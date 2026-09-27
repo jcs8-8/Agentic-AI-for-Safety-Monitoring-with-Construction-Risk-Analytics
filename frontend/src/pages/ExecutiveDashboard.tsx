@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { BarChart2, CheckCircle2 } from 'lucide-react'
+import { BarChart2, CheckCircle2, RefreshCw, TrendingDown } from 'lucide-react'
 import { api } from '@/lib/api'
 import KpiCard from '@/components/dashboard/KpiCard'
 import AgentPerformanceBar from '@/components/dashboard/AgentPerformanceBar'
+import CircularGauge from '@/components/dashboard/CircularGauge'
 
 const iconMap: Record<string, any> = { 'bar-chart-2': BarChart2, 'shield-check': CheckCircle2, 'trending-up': BarChart2, 'dollar-sign': BarChart2 }
 
@@ -11,13 +12,22 @@ export default function ExecutiveDashboard() {
   const { projectId } = useParams()
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  useEffect(() => {
+  const loadDashboard = () => {
     const id = projectId || 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
-    api.get(`/projects/${id}/dashboard/executive`).then(r => { setData(r.data.data); setLoading(false) })
-  }, [projectId])
+    setLoading(true)
+    setError('')
+    api.get(`/projects/${id}/dashboard/executive`)
+      .then(r => setData(r.data.data))
+      .catch(() => setError('Executive metrics are unavailable right now.'))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => { loadDashboard() }, [projectId])
 
   if (loading) return <div className="flex items-center justify-center h-full text-slate-500">Loading...</div>
+  if (error) return <div className="card text-center text-slate-600"><p>{error}</p><button onClick={loadDashboard} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"><RefreshCw className="h-4 w-4" /> Retry</button></div>
   if (!data) return <div className="text-center text-slate-500">No data available</div>
 
   return (
@@ -49,9 +59,11 @@ export default function ExecutiveDashboard() {
           </div>
           <div className="card">
             <h3 className="font-bold text-slate-800 mb-4 text-sm">Site Visualization</h3>
-            <div className="bg-slate-100 rounded-lg p-8 text-center">
-              <p className="text-slate-500">Interactive 3D Site Model</p>
-              <p className="text-xs text-slate-400 mt-2">Zone A: Low Risk | Zone B: High Risk | Zone C: Medium Risk</p>
+            <div className="bg-slate-100 rounded-lg p-6 flex items-center justify-around">
+              <CircularGauge value={Number(String(data.kpis[0]?.value || '0').replace('/100', ''))} label="Health score" />
+              <div className="text-sm text-slate-600 space-y-2">
+                {data.risk_forecast.slice(0, 4).map((point: any) => <div key={point.day} className="flex items-center gap-3"><TrendingDown className="h-4 w-4 text-green-600" /><span>{point.day}</span><strong>{point.predicted}/100</strong></div>)}
+              </div>
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import time
 import random
 from datetime import datetime
+from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,7 +17,8 @@ class InsuranceAgent(BaseAgent):
         self.status = "running"
 
         if db:
-            c_result = await db.execute(select(InsuranceCase).where(InsuranceCase.project_id == project_id))
+            project_uuid = UUID(str(project_id))
+            c_result = await db.execute(select(InsuranceCase).where(InsuranceCase.project_id == project_uuid))
             cases = c_result.scalars().all()
 
             avg_risk = sum(c.risk_score for c in cases) / max(len(cases), 1) if cases else 50
@@ -29,12 +31,12 @@ class InsuranceAgent(BaseAgent):
                 ct = random.choice(["workers_comp", "property_damage", "liability", "environmental"])
                 rs = random.uniform(20, 85)
                 rl = "Low" if rs < 30 else "Medium" if rs < 60 else "High"
-                nc = InsuranceCase(project_id=project_id, claim_type=ct, risk_score=rs, risk_level=rl, status="open", estimated_liability=random.uniform(10000, 500000), incident_date=datetime.utcnow(), description=f"New {ct} risk identified", ai_recommendation="Review coverage limits")
+                nc = InsuranceCase(project_id=project_uuid, claim_type=ct, risk_score=rs, risk_level=rl, status="open", estimated_liability=random.uniform(10000, 500000), incident_date=datetime.utcnow(), description=f"New {ct} risk identified", ai_recommendation="Review coverage limits")
                 db.add(nc)
                 new_cases.append({"type": ct, "risk_score": rs, "level": rl})
 
             if risk_level in ["High", "Critical"]:
-                db.add(Alert(project_id=project_id, alert_type="insurance_alert", severity=4 if risk_level == "Critical" else 3, severity_label=risk_level, message=f"Insurance risk is {risk_level}; review coverage and open cases.", source_agent="InsuranceAgent"))
+                db.add(Alert(project_id=project_uuid, alert_type="insurance_alert", severity=4 if risk_level == "Critical" else 3, severity_label=risk_level, message=f"Insurance risk is {risk_level}; review coverage and open cases.", source_agent="InsuranceAgent"))
 
             metrics = {"insurance_risk_score": avg_risk, "risk_level": risk_level, "total_exposure": total_exp, "open_cases": open_cases + len(new_cases)}
             recs = []

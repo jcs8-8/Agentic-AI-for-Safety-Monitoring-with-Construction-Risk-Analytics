@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 import socketio
 
 from app.database import engine, Base
-from app.routers import projects, site_risks, dashboard, agents, alerts, safety, compliance, insurance, reports
+from app.routers import projects, site_risks, dashboard, agents, alerts, safety, compliance, insurance, reports, copilot, emergencies, front_desk
 from app.auth import router as auth_router
 from app.socket import sio
 
@@ -29,10 +29,14 @@ fastapi_app.include_router(reports.router, prefix="/api/v1", tags=["Reports"])
 fastapi_app.include_router(dashboard.router, prefix="/api/v1", tags=["Dashboard"])
 fastapi_app.include_router(agents.router, prefix="/api/v1/agents", tags=["Agents"])
 fastapi_app.include_router(alerts.router, prefix="/api/v1", tags=["Alerts"])
+fastapi_app.include_router(copilot.router, prefix="/api/v1", tags=["Copilot"])
+fastapi_app.include_router(copilot.router, prefix="/api", tags=["Copilot"])
+fastapi_app.include_router(emergencies.router, prefix="/api/v1", tags=["Emergencies"])
+fastapi_app.include_router(front_desk.router, prefix="/api/v1", tags=["Front Desk"])
 
 @fastapi_app.get("/health")
 async def health_check():
-    return {"status": "healthy", "milestone": "Complete BuildSure AI Platform"}
+    return {"status": "healthy", "milestone": "Milestone 3 complete", "platform": "BuildSure AI"}
 
 
 app = socketio.ASGIApp(sio, other_asgi_app=fastapi_app)

@@ -1,16 +1,30 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { CheckCircle2, BarChart2 } from 'lucide-react'
+import { CheckCircle2, BarChart2, AlertTriangle, Shield, FileCheck } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { api } from '@/lib/api'
 import KpiCard from '@/components/dashboard/KpiCard'
 import ComplianceProgress from '@/components/dashboard/ComplianceProgress'
 import { useSocket } from '@/hooks/useSocket'
 
-const iconMap: Record<string, any> = { 'check-circle': CheckCircle2, 'alert-triangle': CheckCircle2, 'shield': CheckCircle2, 'file-check': CheckCircle2 }
+const iconMap: Record<string, LucideIcon> = { 'check-circle': CheckCircle2, 'alert-triangle': AlertTriangle, shield: Shield, 'file-check': FileCheck }
+
+interface ComplianceCategory { category: string; score: number; color: string }
+interface ComplianceData {
+  project_name: string
+  compliance_kpis: Array<{ label: string; value: string; icon: string; color: string }>
+  insurance_kpis: Array<{ label: string; value: string; icon: string; color: string }>
+  compliance_by_category: ComplianceCategory[]
+  applications: { approval_rate: number; processing_time_days: number | null }
+  overdue_inspections: number
+  documentation_coverage: number
+  upcoming_inspections: Array<{ regulation: string; date: string }>
+  features: string[]
+}
 
 export default function ComplianceDashboard() {
   const { projectId } = useParams()
-  const [data, setData] = useState<any>(null)
+  const [data, setData] = useState<ComplianceData | null>(null)
   const [loading, setLoading] = useState(true)
   const id = projectId || 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
 
@@ -58,13 +72,24 @@ export default function ComplianceDashboard() {
             <h3 className="font-bold text-slate-800 mb-4 text-sm">Applications Overview</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-4 bg-slate-50 rounded-lg">
-                <p className="text-2xl font-bold text-slate-800">86.36%</p>
+                <p className="text-2xl font-bold text-slate-800">{data.applications.approval_rate}%</p>
                 <p className="text-xs text-slate-500">App Approval Rate</p>
               </div>
               <div className="text-center p-4 bg-slate-50 rounded-lg">
-                <p className="text-2xl font-bold text-slate-800">8 days</p>
-                <p className="text-xs text-slate-500">App Processing Time</p>
+                <p className="text-2xl font-bold text-slate-800">{data.documentation_coverage}%</p>
+                <p className="text-xs text-slate-500">Documentation Coverage</p>
               </div>
+            </div>
+          </div>
+          <div className="card">
+            <h3 className="font-bold text-slate-800 mb-4 text-sm">Inspection Tracking</h3>
+            <p className="text-sm text-slate-600 mb-3">{data.overdue_inspections} overdue inspections</p>
+            <div className="space-y-2">
+              {data.upcoming_inspections.length === 0 ? <p className="text-sm text-slate-500">No upcoming inspections scheduled.</p> : data.upcoming_inspections.map((inspection) => (
+                <div key={`${inspection.regulation}-${inspection.date}`} className="flex justify-between text-sm text-slate-600">
+                  <span>{inspection.regulation}</span><span>{new Date(inspection.date).toLocaleDateString()}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -74,7 +99,7 @@ export default function ComplianceDashboard() {
               <BarChart2 className="w-5 h-5 text-accent-orange" /> Key Performance Indicators
             </h3>
             <div className="grid grid-cols-2 gap-4">
-              {allKpis.map((kpi: any, i: number) => (
+              {allKpis.map((kpi, i) => (
                 <KpiCard key={i} label={kpi.label} value={kpi.value} icon={iconMap[kpi.icon] || CheckCircle2} color={kpi.color} />
               ))}
             </div>

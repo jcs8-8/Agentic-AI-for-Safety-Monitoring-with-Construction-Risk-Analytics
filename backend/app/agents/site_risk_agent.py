@@ -1,6 +1,7 @@
 import time
 import random
 from datetime import datetime
+from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,12 +17,13 @@ class SiteRiskAgent(BaseAgent):
         self.status = "running"
 
         if db:
-            result = await db.execute(select(Project).where(Project.project_id == project_id))
+            project_uuid = UUID(str(project_id))
+            result = await db.execute(select(Project).where(Project.project_id == project_uuid))
             if not result.scalar_one_or_none():
                 self.status = "failed"
                 return AgentResult(agent_name=self.name, project_id=project_id, status="failed", recommendations=["Project not found"], execution_time_ms=int((time.time()-start)*1000))
 
-            risks_result = await db.execute(select(SiteRisk).where(SiteRisk.project_id == project_id))
+            risks_result = await db.execute(select(SiteRisk).where(SiteRisk.project_id == project_uuid))
             existing = risks_result.scalars().all()
 
             risk_types = ["fall_hazard", "equipment_risk", "electrical_hazard", "environmental_risk", "structural_risk"]
@@ -30,7 +32,7 @@ class SiteRiskAgent(BaseAgent):
 
             for _ in range(random.randint(1, 3)):
                 rt = random.choice(risk_types)
-                nr = SiteRisk(project_id=project_id, risk_type=rt, severity=random.randint(2,5), probability=random.randint(2,5), impact=random.randint(2,5), location_zone=random.choice(zones), description=f"AI detected {rt.replace('_', ' ')} in {random.choice(zones)}", mitigation_status="open", ai_confidence=round(random.uniform(0.75, 0.98), 2))
+                nr = SiteRisk(project_id=project_uuid, risk_type=rt, severity=random.randint(2,5), probability=random.randint(2,5), impact=random.randint(2,5), location_zone=random.choice(zones), description=f"AI detected {rt.replace('_', ' ')} in {random.choice(zones)}", mitigation_status="open", ai_confidence=round(random.uniform(0.75, 0.98), 2))
                 db.add(nr)
                 new_findings.append({"risk_type": rt, "severity": nr.severity, "location": nr.location_zone, "confidence": nr.ai_confidence})
 

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Bell, ChevronDown, Activity } from 'lucide-react'
+import EmergencyButton from '@/components/emergency/EmergencyButton'
 
 export default function TopBar() {
   const [project] = useState('Downtown High-Rise Tower')
@@ -12,6 +13,7 @@ export default function TopBar() {
         </button>
       </div>
       <div className="flex items-center gap-4">
+        <EmergencyButton />
         <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-sm font-medium">
           <Activity className="w-4 h-4 animate-pulse" />
           Live Monitoring

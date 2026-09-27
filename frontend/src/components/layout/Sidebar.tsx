@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { Home, AlertTriangle, Shield, ClipboardCheck, Umbrella, BarChart3, Bot, FileText, Bell, Settings, Building2, Workflow } from 'lucide-react'
+import { Home, AlertTriangle, Shield, ClipboardCheck, Umbrella, BarChart3, Bot, FileText, Bell, Settings, Building2, Workflow, Siren } from 'lucide-react'
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: Home },
@@ -11,6 +11,7 @@ const navItems = [
   { path: '/agents', label: 'Agents', icon: Bot },
   { path: '/reports', label: 'Reports', icon: FileText },
   { path: '/alerts', label: 'Alerts', icon: Bell },
+  { path: '/incidents', label: 'Incidents', icon: Siren },
   { path: '/settings', label: 'Settings', icon: Settings },
   { path: '/architecture', label: 'Architecture', icon: Workflow },
 ]

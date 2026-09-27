@@ -1,6 +1,7 @@
 import time
 import random
 from datetime import datetime
+from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,9 +17,10 @@ class SafetyAgent(BaseAgent):
         self.status = "running"
 
         if db:
-            v_result = await db.execute(select(PPEViolation).where(PPEViolation.project_id == project_id))
+            project_uuid = UUID(str(project_id))
+            v_result = await db.execute(select(PPEViolation).where(PPEViolation.project_id == project_uuid))
             violations = v_result.scalars().all()
-            i_result = await db.execute(select(SafetyIncident).where(SafetyIncident.project_id == project_id))
+            i_result = await db.execute(select(SafetyIncident).where(SafetyIncident.project_id == project_uuid))
             incidents = i_result.scalars().all()
 
             total_v = len(violations)
@@ -29,12 +31,12 @@ class SafetyAgent(BaseAgent):
             new_v = []
             for _ in range(random.randint(0, 2)):
                 vt = random.choice(["missing_hard_hat", "no_safety_vest", "no_safety_boots", "no_protective_gloves"])
-                nv = PPEViolation(project_id=project_id, worker_id=f"W{random.randint(100,999)}", worker_name=f"Worker {random.randint(1,50)}", violation_type=vt, ai_confidence=round(random.uniform(0.85, 0.99), 2), location_zone=random.choice(["Zone A", "Zone B", "Zone C"]))
+                nv = PPEViolation(project_id=project_uuid, worker_id=f"W{random.randint(100,999)}", worker_name=f"Worker {random.randint(1,50)}", violation_type=vt, ai_confidence=round(random.uniform(0.85, 0.99), 2), location_zone=random.choice(["Zone A", "Zone B", "Zone C"]))
                 db.add(nv)
                 new_v.append({"type": vt, "worker": nv.worker_name})
 
             if new_v or ppe_rate < 90:
-                db.add(Alert(project_id=project_id, alert_type="safety_violation", severity=3 if ppe_rate < 90 else 2, severity_label="High" if ppe_rate < 90 else "Medium", message=f"Safety agent detected {len(new_v)} new PPE violation(s).", source_agent="SafetyAgent"))
+                db.add(Alert(project_id=project_uuid, alert_type="safety_violation", severity=3 if ppe_rate < 90 else 2, severity_label="High" if ppe_rate < 90 else "Medium", message=f"Safety agent detected {len(new_v)} new PPE violation(s).", source_agent="SafetyAgent"))
 
             metrics = {"ppe_compliance_rate": ppe_rate, "safety_violations": total_v + len(new_v), "workers_monitored": 342, "safety_score": score}
             recs = []

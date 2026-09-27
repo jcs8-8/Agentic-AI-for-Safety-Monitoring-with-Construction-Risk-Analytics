@@ -2,14 +2,14 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 from decimal import Decimal
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 class InsuranceCaseBase(BaseModel):
-    claim_type: str
-    risk_score: float
-    risk_level: str
-    status: str = "open"
-    estimated_liability: Optional[Decimal] = None
+    claim_type: str = Field(min_length=1, max_length=100)
+    risk_score: float = Field(ge=0, le=100)
+    risk_level: str = Field(pattern="^(Low|Medium|High|Critical)$")
+    status: str = Field(default="open", pattern="^(open|closed|under_review|disputed)$")
+    estimated_liability: Optional[Decimal] = Field(default=None, ge=0)
     incident_date: datetime
     description: Optional[str] = None
     ai_recommendation: Optional[str] = None

@@ -3,31 +3,36 @@ import { api } from '@/lib/api'
 import { Play, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 
 interface Agent { agent_name: string; status: string; last_run: string | null; findings_count: number; is_running: boolean }
+const projectId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
 
 export default function AgentOrchestrator() {
   const [agents, setAgents] = useState<Agent[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [runResult, setRunResult] = useState<any>(null)
 
   useEffect(() => {
     loadAgents()
   }, [])
 
   const loadAgents = () => {
-    api.get('/agents').then(r => setAgents(r.data.data))
+    api.get('/agents').then(r => setAgents(r.data.data)).catch(() => setError('Agent status is unavailable.'))
   }
 
   const triggerAgent = async (name: string) => {
     setLoading(true)
-    await api.post(`/agents/${name}/trigger`, { project_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
-    loadAgents()
-    setLoading(false)
+    setError('')
+    try { await api.post(`/agents/${name}/trigger`, { project_id: projectId }); await loadAgents() }
+    catch { setError(`${name} could not complete.`) }
+    finally { setLoading(false) }
   }
 
   const orchestrateAll = async () => {
     setLoading(true)
-    await api.post('/agents/orchestrate', { project_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
-    loadAgents()
-    setLoading(false)
+    setError('')
+    try { const response = await api.post('/agents/orchestrate', { project_id: projectId }); setRunResult(response.data.data); await loadAgents() }
+    catch { setError('The orchestration run could not complete.') }
+    finally { setLoading(false) }
   }
 
   return (
@@ -40,6 +45,8 @@ export default function AgentOrchestrator() {
           Run All Agents
         </button>
       </div>
+      {error && <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+      {runResult && <div className="card mb-4"><p className="text-sm text-slate-500">Latest project risk score</p><p className="text-3xl font-bold text-slate-900">{runResult.project_risk_score}/100</p><div className="mt-3 space-y-1">{(runResult.recommendations || []).map((item: string) => <p key={item} className="text-sm text-slate-600">{item}</p>)}</div></div>}
       <div className="grid grid-cols-1 gap-4">
         {agents.map((agent) => (
           <div key={agent.agent_name} className="card flex items-center justify-between">

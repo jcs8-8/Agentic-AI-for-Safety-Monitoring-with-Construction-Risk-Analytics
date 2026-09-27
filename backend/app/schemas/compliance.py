@@ -1,14 +1,14 @@
 import uuid
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 class ComplianceCheckBase(BaseModel):
-    regulation_name: str
-    regulation_category: str
-    compliance_status: str = "pending"
+    regulation_name: str = Field(min_length=1, max_length=255)
+    regulation_category: str = Field(min_length=1, max_length=100)
+    compliance_status: str = Field(default="pending", pattern="^(compliant|violation|pending|under_review)$")
     inspector_notes: Optional[str] = None
-    severity: int = 1
+    severity: int = Field(default=1, ge=1, le=5)
     next_inspection_date: Optional[datetime] = None
     documentation_url: Optional[str] = None
 

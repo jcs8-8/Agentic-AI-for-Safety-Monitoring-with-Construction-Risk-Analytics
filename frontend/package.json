@@ -11,6 +11,8 @@
   "dependencies": {
     "axios": "^1.6.7",
     "clsx": "^2.1.0",
+    "framer-motion": "^11.18.2",
+    "jspdf": "^2.5.2",
     "lucide-react": "^0.323.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

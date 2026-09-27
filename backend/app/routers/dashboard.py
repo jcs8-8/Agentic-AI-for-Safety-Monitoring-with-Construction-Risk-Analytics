@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import Project, SiteRisk, SafetyIncident, PPEViolation, ComplianceCheck, InsuranceCase, Alert
 from app.schemas import APIResponse
+from app.engine.risk_intelligence import RiskIntelligenceEngine
 
 router = APIRouter()
 
@@ -82,12 +83,14 @@ async def get_executive_dashboard(project_id: UUID, db: AsyncSession = Depends(g
     comp_score = round((len([c for c in checks if c.compliance_status == "compliant"]) / max(len(checks), 1)) * 100, 1)
     total_v = len(violations)
     safety_score = max(0, round(100 - total_v * 0.5 - sum(i.severity * 2 for i in incidents if i.status == "open"), 1))
+    open_alerts = len([a for a in (await db.execute(select(Alert).where(Alert.project_id == project_id, Alert.acknowledged.is_(False)))).scalars().all()])
+    total_exposure = sum(float(c.estimated_liability or 0) for c in cases if c.status not in {"closed", "resolved"})
 
     kpis = [
         {"label": "Project Risk Score", "value": f"{risk_score}/100", "icon": "bar-chart-2", "color": "#3b82f6"},
-        {"label": "Incidents Prevented", "value": "67", "icon": "shield-check", "color": "#22c55e"},
-        {"label": "Compliance Improvement", "value": "15%", "icon": "trending-up", "color": "#f59e0b"},
-        {"label": "Cost Savings", "value": "$2.4M", "icon": "dollar-sign", "color": "#22c55e"},
+        {"label": "Open Incidents", "value": str(len([i for i in incidents if i.status == "open"])), "icon": "shield-check", "color": "#ef4444"},
+        {"label": "Open Alerts", "value": str(open_alerts), "icon": "trending-up", "color": "#f59e0b"},
+        {"label": "Open Exposure", "value": f"${total_exposure:,.0f}", "icon": "dollar-sign", "color": "#22c55e"},
     ]
 
     agent_perf = [
@@ -102,9 +105,11 @@ async def get_executive_dashboard(project_id: UUID, db: AsyncSession = Depends(g
         "kpis": kpis, "agent_performance": agent_perf,
         "risk_forecast": [{"day": f"Day {i+1}", "predicted": max(0, risk_score - i*2)} for i in range(7)],
         "recommendations": [
-            "Continue monitoring Zone B for fall hazards",
-            "Schedule safety briefing for new workers",
-            "Review compliance checklist before next inspection"
+            recommendation for recommendation in [
+                "Continue monitoring high-probability site risks" if risks else "No site risks currently recorded",
+                "Schedule a safety briefing for unresolved incidents" if any(i.status == "open" for i in incidents) else "Safety incidents are under control",
+                "Review compliance checklist before the next inspection" if comp_score < 100 else "Compliance checks are fully up to date",
+            ]
         ],
         "features": ["Project Risk Overview", "Agent Collaboration Monitoring", "Incident Analytics", "Insurance Exposure Analysis", "Executive Recommendations Panel", "Construction Risk Intelligence Engine", "Executive Project Dashboard", "Risk Forecasting", "Compliance Performance Trends"]
     })

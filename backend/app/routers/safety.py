@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +13,7 @@ router = APIRouter()
 @router.get("/projects/{project_id}/safety/incidents", response_model=APIResponse)
 async def list_incidents(project_id: UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(SafetyIncident).where(SafetyIncident.project_id == project_id).order_by(SafetyIncident.incident_date.desc()))
-    return APIResponse(data=[{"incident_id": str(i.incident_id), "type": i.incident_type, "severity": i.severity, "date": i.incident_date.isoformat(), "status": i.status} for i in result.scalars().all()])
+    return APIResponse(data=[{"incident_id": str(i.incident_id), "type": i.incident_type, "severity": i.severity, "date": i.incident_date.isoformat(), "status": i.status, "worker": i.worker_name or i.worker_id, "description": i.description, "location": i.location_zone, "ppe_involved": i.ppe_involved, "root_cause": i.root_cause, "corrective_action": i.corrective_action} for i in result.scalars().all()])
 
 @router.post("/projects/{project_id}/safety/incidents", response_model=APIResponse)
 async def create_incident(project_id: UUID, incident: SafetyIncidentCreate, db: AsyncSession = Depends(get_db)):
@@ -22,6 +22,19 @@ async def create_incident(project_id: UUID, incident: SafetyIncidentCreate, db: 
     db.add(db_incident)
     await db.flush()
     return APIResponse(data={"incident_id": str(db_incident.incident_id), "status": db_incident.status})
+
+
+@router.put("/safety/incidents/{incident_id}/status", response_model=APIResponse)
+async def update_incident_status(incident_id: UUID, status: str, db: AsyncSession = Depends(get_db)):
+    if status not in {"open", "investigating", "resolved", "closed"}:
+        raise HTTPException(status_code=400, detail="Invalid incident status")
+    result = await db.execute(select(SafetyIncident).where(SafetyIncident.incident_id == incident_id))
+    incident = result.scalar_one_or_none()
+    if incident is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    incident.status = status
+    await db.commit()
+    return APIResponse(data={"incident_id": str(incident.incident_id), "status": incident.status}, message="Incident status updated")
 
 @router.get("/projects/{project_id}/safety/ppe-violations", response_model=APIResponse)
 async def list_ppe_violations(project_id: UUID, db: AsyncSession = Depends(get_db)):

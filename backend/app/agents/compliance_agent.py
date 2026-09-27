@@ -1,6 +1,7 @@
 import time
 import random
 from datetime import datetime
+from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,7 +17,8 @@ class ComplianceAgent(BaseAgent):
         self.status = "running"
 
         if db:
-            c_result = await db.execute(select(ComplianceCheck).where(ComplianceCheck.project_id == project_id))
+            project_uuid = UUID(str(project_id))
+            c_result = await db.execute(select(ComplianceCheck).where(ComplianceCheck.project_id == project_uuid))
             checks = c_result.scalars().all()
 
             total = len(checks) or 1
@@ -28,12 +30,12 @@ class ComplianceAgent(BaseAgent):
             for _ in range(random.randint(0, 1)):
                 cat = random.choice(["OSHA_Standards", "Building_Codes", "Environmental_Regulations", "Insurance_Requirements"])
                 reg = {"OSHA_Standards": "OSHA-1926.501", "Building_Codes": "IBC-2021-Section-1705", "Environmental_Regulations": "EPA-Clean-Air-Act", "Insurance_Requirements": "GL-Policy-2026"}[cat]
-                nc = ComplianceCheck(project_id=project_id, regulation_name=reg, regulation_category=cat, compliance_status=random.choice(["compliant", "pending"]), severity=random.randint(1,3))
+                nc = ComplianceCheck(project_id=project_uuid, regulation_name=reg, regulation_category=cat, compliance_status=random.choice(["compliant", "pending"]), severity=random.randint(1,3))
                 db.add(nc)
                 new_c.append({"regulation": reg, "category": cat, "status": nc.compliance_status})
 
             if violations or score < 95:
-                db.add(Alert(project_id=project_id, alert_type="compliance_violation", severity=3 if violations else 2, severity_label="High" if violations else "Medium", message=f"Compliance review found {violations} violation(s).", source_agent="ComplianceAgent"))
+                db.add(Alert(project_id=project_uuid, alert_type="compliance_violation", severity=3 if violations else 2, severity_label="High" if violations else "Medium", message=f"Compliance review found {violations} violation(s).", source_agent="ComplianceAgent"))
 
             metrics = {"compliance_score": score, "open_violations": violations, "audit_readiness": max(0, score - 4), "regulatory_readiness_score": score}
             recs = []

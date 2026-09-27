@@ -12,6 +12,11 @@ class ReportBase(BaseModel):
 class ReportCreate(ReportBase):
     project_id: uuid.UUID
 
+
+class ReportRequest(BaseModel):
+    report_type: str
+    file_format: str = "txt"
+
 class ReportResponse(ReportBase):
     model_config = ConfigDict(from_attributes=True)
     report_id: uuid.UUID

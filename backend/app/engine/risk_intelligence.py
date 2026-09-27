@@ -2,16 +2,19 @@ from typing import List, Dict, Any
 from app.agents.base_agent import AgentResult
 
 class RiskIntelligenceEngine:
+    WEIGHTS = {"safety": 0.30, "site_risk": 0.25, "compliance": 0.25, "insurance": 0.20}
+
     def calculate_project_risk_score(self, agent_results: Dict[str, AgentResult]) -> float:
-        weights = {"safety": 0.30, "site_risk": 0.25, "compliance": 0.25, "insurance": 0.20}
-        score = 0
-        for agent, weight in weights.items():
+        weighted_score = 0
+        applied_weight = 0
+        for agent, weight in self.WEIGHTS.items():
             if agent in agent_results and agent_results[agent].status == "success":
-                m = agent_results[agent].metrics
-                agent_score = m.get("site_risk_score", m.get("safety_score", m.get("compliance_score", m.get("insurance_risk_score", 50))))
-                if isinstance(agent_score, str): agent_score = 50
-                score += agent_score * weight
-        return round(score, 1)
+                metrics = agent_results[agent].metrics
+                agent_score = next((metrics[key] for key in ("site_risk_score", "safety_score", "compliance_score", "insurance_risk_score") if key in metrics), 50)
+                if isinstance(agent_score, (int, float)):
+                    weighted_score += max(0, min(100, agent_score)) * weight
+                    applied_weight += weight
+        return round(weighted_score / applied_weight, 1) if applied_weight else 50.0
 
     def generate_recommendations(self, agent_results: Dict[str, AgentResult]) -> List[str]:
         recs = []
@@ -24,5 +27,8 @@ class RiskIntelligenceEngine:
         if "compliance" in agent_results:
             v = agent_results["compliance"].metrics.get("open_violations", 0)
             if v > 0: recs.append(f"{v} compliance violations require attention.")
+        if "insurance" in agent_results:
+            exposure = agent_results["insurance"].metrics.get("total_exposure", 0)
+            if exposure > 0: recs.append(f"Review insurance exposure of ${exposure:,.0f} across active cases.")
         if not recs: recs.append("All systems operating within normal parameters.")
         return recs

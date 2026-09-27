@@ -1,0 +1,17 @@
+import { useState } from 'react'
+import { AlertOctagon, X } from 'lucide-react'
+import { useEmergencyStore } from '@/lib/emergency/emergencyStore'
+import type { IncidentType, UserRole } from '@/lib/emergency/types'
+
+export default function EmergencyButton() {
+  const activate = useEmergencyStore(state => state.activate)
+  const requestActivation = useEmergencyStore(state => state.requestActivation)
+  const [open, setOpen] = useState(false)
+  const [type, setType] = useState<IncidentType>('Injury')
+  const [zone, setZone] = useState('Zone B')
+  const role = (localStorage.getItem('buildsure_role') || 'SITE_MANAGER').toUpperCase() as UserRole
+  const user = localStorage.getItem('buildsure_user_name') || 'John Doe'
+  const authorized = role === 'SITE_MANAGER' || role === 'SAFETY_OFFICER'
+  const submit = async () => { if (authorized) await activate(type, zone, user, role); else await requestActivation(type, zone, user); setOpen(false) }
+  return <>{<button onClick={() => setOpen(true)} className="flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-xs font-extrabold tracking-wide text-white shadow-sm hover:bg-red-700 max-md:fixed max-md:bottom-5 max-md:right-5 max-md:z-50 max-md:rounded-full max-md:p-4"><AlertOctagon className="h-4 w-4" /><span className="max-md:hidden">EMERGENCY</span></button>}{open && <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4" onClick={() => setOpen(false)}><div onClick={event => event.stopPropagation()} className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between"><div><p className="text-xs font-bold uppercase tracking-widest text-red-600">Emergency response</p><h2 className="mt-1 text-xl font-bold text-slate-900">{authorized ? 'Activate Emergency Response Mode?' : 'Request Emergency Activation?'}</h2></div><button onClick={() => setOpen(false)} aria-label="Close" className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button></div><p className="mt-3 text-sm text-slate-600">This switches connected dashboards to crisis-management view and begins an immutable incident timeline.</p><label className="mt-5 block text-xs font-bold uppercase tracking-wide text-slate-500">Incident type<select value={type} onChange={event => setType(event.target.value as IncidentType)} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-500">{['Injury', 'Structural', 'Fire', 'Gas Leak', 'Other'].map(item => <option key={item}>{item}</option>)}</select></label><label className="mt-3 block text-xs font-bold uppercase tracking-wide text-slate-500">Affected zone<select value={zone} onChange={event => setZone(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-500">{['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Site-wide'].map(item => <option key={item}>{item}</option>)}</select></label><div className="mt-5 flex gap-3"><button onClick={() => setOpen(false)} className="flex-1 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600">Cancel</button><button onClick={() => void submit()} className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700">{authorized ? 'Activate now' : 'Send request'}</button></div></div></div>}</>
+}
